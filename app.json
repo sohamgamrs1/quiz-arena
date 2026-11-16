@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Quiz Arena",
+    "slug": "quiz-arena",
+    "scheme": "quizarena",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0C0E",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "app.quizarena" },
+    "android": { "package": "app.quizarena" },
+    "web": { "bundler": "metro", "output": "single" },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
