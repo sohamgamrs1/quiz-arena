@@ -1,45 +1,30 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
-import { LayoutAnimation, Platform, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from './ui/Avatar';
+import { LayoutAnimation, Platform, StyleSheet, View } from 'react-native';
+import { T } from './ui/T';
+import { Monogram } from './ui/Monogram';
 import type { LeaderboardRow } from '@/lib/types';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { colors, motion, numericFont, radius, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, motion, radius, space } from '@/lib/tokens';
 
 interface Props {
   rows: LeaderboardRow[];
-  /** Pin the viewer's row at the bottom when they are outside the top 10. */
   pinMe?: boolean;
   limit?: number;
 }
 
-function Delta({ value }: { value: number }) {
-  if (value === 0) return <View style={styles.delta} />;
-  const up = value > 0;
-  return (
-    <View style={styles.delta}>
-      <Ionicons
-        name={up ? 'caret-up' : 'caret-down'}
-        size={12}
-        color={up ? colors.success : colors.danger}
-      />
-      <Text style={[styles.deltaText, { color: up ? colors.success : colors.danger }]}>
-        {Math.abs(value)}
-      </Text>
-    </View>
-  );
-}
-
 function Row({ row }: { row: LeaderboardRow }) {
   return (
-    <View style={[styles.row, row.is_me ? styles.rowMe : null]}>
-      <Text style={styles.rank}>{row.rank}</Text>
-      <Avatar emoji={row.avatar_emoji} size={32} ring={row.is_me} />
-      <Text style={[styles.name, row.is_me ? styles.nameMe : null]} numberOfLines={1}>
+    <View style={[styles.row, row.is_me ? styles.me : null]}>
+      <T variant="meta" numeric color={colors.faint} style={styles.rank}>
+        {row.rank}
+      </T>
+      <Monogram name={row.name} size={30} />
+      <T variant="body" style={styles.name} numberOfLines={1}>
         {row.name}
-      </Text>
-      <Delta value={row.delta} />
-      <Text style={styles.score}>{row.score}</Text>
+      </T>
+      <T variant="body" numeric strong>
+        {row.score.toLocaleString('en-IN')}
+      </T>
     </View>
   );
 }
@@ -47,16 +32,11 @@ function Row({ row }: { row: LeaderboardRow }) {
 export function LeaderboardList({ rows, pinMe = true, limit = 10 }: Props) {
   const reducedMotion = useReducedMotion();
 
-  // A gentle reorder when the board changes — never longer than 250ms, and skipped
-  // entirely when the device asks for reduced motion (or on web, where the list
-  // simply re-renders in place).
   useEffect(() => {
     if (reducedMotion || Platform.OS === 'web') return;
     LayoutAnimation.configureNext({
       duration: motion.fast,
       update: { type: LayoutAnimation.Types.easeInEaseOut },
-      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
     });
   }, [rows, reducedMotion]);
 
@@ -71,7 +51,9 @@ export function LeaderboardList({ rows, pinMe = true, limit = 10 }: Props) {
       ))}
       {meOutside && me ? (
         <>
-          <Text style={styles.gap}>···</Text>
+          <T variant="meta" center color={colors.faint}>
+            ···
+          </T>
           <Row row={me} />
         </>
       ) : null}
@@ -80,60 +62,23 @@ export function LeaderboardList({ rows, pinMe = true, limit = 10 }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    gap: space.x2,
-  },
+  wrap: { gap: space.x2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.x3,
     paddingHorizontal: space.x3,
     paddingVertical: space.x2,
-    borderRadius: radius.card,
+    minHeight: 50,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: 'transparent',
     backgroundColor: colors.surface,
-    minHeight: 48,
   },
-  rowMe: {
-    borderColor: colors.accent,
+  me: {
+    borderColor: colors.accentLine,
     backgroundColor: colors.accentSoft,
   },
-  rank: {
-    width: 22,
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    fontWeight: weight.semibold,
-    fontFamily: numericFont,
-  },
-  name: {
-    flex: 1,
-    color: colors.text,
-    fontSize: typeScale.sm,
-  },
-  nameMe: {
-    fontWeight: weight.semibold,
-  },
-  delta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 28,
-  },
-  deltaText: {
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-  },
-  score: {
-    color: colors.text,
-    fontSize: typeScale.sm,
-    fontWeight: weight.semibold,
-    fontFamily: numericFont,
-    minWidth: 48,
-    textAlign: 'right',
-  },
-  gap: {
-    textAlign: 'center',
-    color: colors.muted,
-    fontSize: typeScale.sm,
-  },
+  rank: { width: 18 },
+  name: { flex: 1 },
 });

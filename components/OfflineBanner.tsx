@@ -1,6 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View } from 'react-native';
+import { T } from './ui/T';
 import type { ConnectionState } from '@/lib/types';
-import { colors, radius, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, radius, space } from '@/lib/tokens';
 
 interface Props {
   connection: ConnectionState;
@@ -8,36 +10,35 @@ interface Props {
 
 export function OfflineBanner({ connection }: Props) {
   if (connection === 'live' || connection === 'idle') return null;
-
-  const message =
-    connection === 'offline'
-      ? 'reconnecting — answers still count if you get back before the timer ends'
-      : 'connecting to the room…';
+  const offline = connection === 'offline';
 
   return (
-    <View style={[styles.wrap, connection === 'offline' ? styles.warn : null]}>
-      <Text style={styles.text}>{message}</Text>
+    <View style={[styles.wrap, offline ? styles.warn : null]}>
+      <Ionicons
+        name={offline ? 'cloud-offline-outline' : 'sync-outline'}
+        size={14}
+        color={offline ? colors.bad : colors.muted}
+      />
+      <T variant="meta" style={styles.text}>
+        {offline ? 'Reconnecting — answers still count until the timer ends' : 'Connecting to the room'}
+      </T>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.surfaceRaised,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.x2,
+    backgroundColor: colors.raised,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.card,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
     paddingHorizontal: space.x3,
     paddingVertical: space.x2,
     marginBottom: space.x3,
   },
-  warn: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerSoft,
-  },
-  text: {
-    color: colors.text,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-  },
+  warn: { borderColor: colors.badLine, backgroundColor: colors.badSoft },
+  text: { flex: 1 },
 });

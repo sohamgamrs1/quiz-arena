@@ -1,7 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Button } from './ui/Button';
-import { colors, space, type as typeScale, weight } from '@/lib/tokens';
+import { T } from './ui/T';
+import { colors, space } from '@/lib/tokens';
 
 interface Props {
   children: ReactNode;
@@ -15,26 +16,24 @@ export class ErrorBoundary extends Component<Props, State> {
   state: State = { message: null };
 
   static getDerivedStateFromError(error: unknown): State {
-    return { message: error instanceof Error ? error.message : 'something broke' };
+    return { message: error instanceof Error ? error.message : 'Something broke' };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    if (__DEV__) {
-      console.warn('quiz arena crashed', error.message, info.componentStack);
-    }
+    if (__DEV__) console.warn('quiz arena crashed', error.message, info.componentStack);
   }
 
   render(): ReactNode {
     if (this.state.message) {
       return (
         <View style={styles.wrap}>
-          <Text style={styles.title}>something broke</Text>
-          <Text style={styles.body}>{this.state.message}</Text>
-          <Button
-            label="try again"
-            onPress={() => this.setState({ message: null })}
-            style={styles.action}
-          />
+          <T variant="h2" center>
+            Something broke
+          </T>
+          <T variant="meta" center style={styles.body}>
+            {this.state.message}
+          </T>
+          <Button label="Try again" variant="secondary" onPress={() => this.setState({ message: null })} style={styles.action} />
         </View>
       );
     }
@@ -51,18 +50,6 @@ const styles = StyleSheet.create({
     padding: space.x6,
     gap: space.x2,
   },
-  title: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-  },
-  body: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-  action: {
-    marginTop: space.x4,
-    minWidth: 160,
-  },
+  body: { maxWidth: 300 },
+  action: { marginTop: space.x4, minWidth: 160 },
 });
