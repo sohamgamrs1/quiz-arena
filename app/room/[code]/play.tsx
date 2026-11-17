@@ -1,20 +1,22 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { LeaderboardScreen } from '@/components/screens/LeaderboardScreen';
 import { QuestionScreen } from '@/components/screens/QuestionScreen';
 import { ResultsScreen } from '@/components/screens/ResultsScreen';
 import { RevealScreen } from '@/components/screens/RevealScreen';
 import { Button } from '@/components/ui/Button';
+import { Notice } from '@/components/ui/Notice';
 import { Screen } from '@/components/ui/Screen';
+import { T } from '@/components/ui/T';
 import { api, friendlyError } from '@/lib/api';
 import { clockOffsetMs } from '@/lib/format';
 import { recordGame } from '@/lib/history';
 import { useGameStore } from '@/lib/store';
 import { useCountdown } from '@/lib/useCountdown';
 import { useRoomSync } from '@/lib/useRoomSync';
-import { colors, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, space } from '@/lib/tokens';
 
 type Phase = 'reveal' | 'board';
 
@@ -36,8 +38,6 @@ export default function Play() {
   const recorded = useRef(false);
   const remainingRef = useRef(0);
 
-  // Display-only clock, corrected against server_now so a wrong device clock
-  // cannot extend the window on screen (the server rejects late answers regardless).
   const offset = useMemo(
     () => (room ? clockOffsetMs(room.server_now, Date.now()) : 0),
     [room?.server_now],
@@ -46,8 +46,6 @@ export default function Play() {
   remainingRef.current = remaining;
   const expired = remaining === 0;
 
-  // The question is over on the server's clock. Whoever notices first closes it;
-  // close_question is idempotent and re-checks the deadline itself.
   useEffect(() => {
     if (!room || room.status !== 'question' || !expired) return;
     const roomId = room.room_id;
@@ -66,7 +64,6 @@ export default function Play() {
     setNote(null);
   }, [room?.index, room?.status]);
 
-  // Tally the round once, on the reveal, for the results screen.
   useEffect(() => {
     if (!room || room.status !== 'reveal' || !room.my_answer) return;
     if (counted.current.has(room.index)) return;
@@ -86,14 +83,14 @@ export default function Play() {
     if (!me) return;
     void recordGame({
       quizTitle: room.quiz.title,
-      emoji: room.quiz.cover_emoji,
+      emoji: '',
       score: me.score,
       rank: me.rank,
       players: room.player_count,
       mode: room.mode,
       at: new Date().toISOString(),
     });
-  }, [room?.status, room]);
+  }, [room?.status]);
 
   async function answer(optionId: string): Promise<void> {
     const question = room?.question;
@@ -107,7 +104,7 @@ export default function Play() {
     try {
       const result = await api.submitAnswer(room.room_id, question.question_id, optionId);
       if (!result.accepted) {
-        setNote('too late — that answer was outside the window');
+        setNote('Too late — that answer was outside the window');
       } else {
         setStats((prev) => ({ ...prev, times: [...prev.times, elapsed] }));
       }
@@ -162,9 +159,13 @@ export default function Play() {
     return (
       <Screen>
         <View style={styles.centre}>
-          <Text style={styles.title}>this room is not open</Text>
-          <Text style={styles.muted}>{error ?? 'ask the host for a fresh code'}</Text>
-          <Button label="back home" onPress={() => router.replace('/')} variant="secondary" />
+          <T variant="h2" center>
+            This room is not open
+          </T>
+          <T variant="meta" center style={styles.gap}>
+            {error ?? 'Ask the host for a fresh code'}
+          </T>
+          <Button label="Back home" variant="secondary" onPress={() => router.replace('/')} />
         </View>
       </Screen>
     );
@@ -186,12 +187,7 @@ export default function Play() {
 
       {room.status === 'reveal' && room.question && room.reveal ? (
         phase === 'board' ? (
-          <LeaderboardScreen
-            room={room}
-            isHost={room.is_host}
-            onNext={() => void advance()}
-            busy={busy}
-          />
+          <LeaderboardScreen room={room} isHost={room.is_host} onNext={() => void advance()} busy={busy} />
         ) : (
           <RevealScreen
             room={room}
@@ -214,8 +210,8 @@ export default function Play() {
             const me = room.leaderboard.find((row) => row.is_me);
             void Share.share({
               message: me
-                ? `i finished #${me.rank} with ${me.score} points in ${room.quiz.title} on quiz arena`
-                : `i just played ${room.quiz.title} on quiz arena`,
+                ? `I finished #${me.rank} with ${me.score} points in ${room.quiz.title} on Quiz Arena`
+                : `I just played ${room.quiz.title} on Quiz Arena`,
             });
           }}
           onHome={() => router.replace('/')}
@@ -224,46 +220,38 @@ export default function Play() {
 
       {room.status === 'lobby' ? (
         <View style={styles.centre}>
-          <Text style={styles.title}>waiting for the host</Text>
-          <Text style={styles.muted}>the questions start as soon as they begin</Text>
+          <T variant="h2" center>
+            Waiting for the host
+          </T>
+          <T variant="meta" center>
+            The questions start as soon as they begin
+          </T>
         </View>
       ) : null}
 
       {room.status === 'abandoned' ? (
         <View style={styles.centre}>
-          <Text style={styles.title}>the host left</Text>
-          <Text style={styles.muted}>this room is closed</Text>
-          <Button label="back home" onPress={() => router.replace('/')} variant="secondary" />
+          <T variant="h2" center>
+            The host left
+          </T>
+          <T variant="meta" center style={styles.gap}>
+            This room is closed
+          </T>
+          <Button label="Back home" variant="secondary" onPress={() => router.replace('/')} />
         </View>
       ) : null}
 
-      {note ? <Text style={styles.note}>{note}</Text> : null}
+      {note ? (
+        <View style={styles.note}>
+          <Notice message={note} />
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  centre: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x2,
-  },
-  title: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-    textAlign: 'center',
-  },
-  muted: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-  note: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    textAlign: 'center',
-    marginTop: space.x3,
-  },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.x3 },
+  gap: { maxWidth: 300 },
+  note: { marginTop: space.x3 },
 });

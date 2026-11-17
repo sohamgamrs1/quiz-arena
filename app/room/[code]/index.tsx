@@ -3,19 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Share, StyleSheet, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Monogram } from '@/components/ui/Monogram';
+import { Notice } from '@/components/ui/Notice';
 import { OfflineBanner } from '@/components/OfflineBanner';
-import { Pill } from '@/components/ui/Pill';
 import { Screen } from '@/components/ui/Screen';
+import { T } from '@/components/ui/T';
 import { api, friendlyError } from '@/lib/api';
 import { loadProfile } from '@/lib/auth';
-import { maskCode } from '@/lib/format';
 import { useRoomSync } from '@/lib/useRoomSync';
-import { colors, numericFont, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, fonts, radius, space } from '@/lib/tokens';
 
 export default function Lobby() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -24,14 +23,13 @@ export default function Lobby() {
   const [error, setError] = useState<string | null>(null);
   const joined = useRef(false);
 
-  // Arriving by code or by link: take a seat before anything else can be read.
   useEffect(() => {
-    if (!code || joined.current || !profile.data) return;
+    const me = profile.data;
+    if (!code || joined.current || !me) return;
     joined.current = true;
-
     (async () => {
       try {
-        await api.joinRoom(code, profile.data.display_name, profile.data.avatar_emoji);
+        await api.joinRoom(code, me.display_name, '');
         setSeatReady(true);
       } catch (err) {
         setError(friendlyError(err));
@@ -43,9 +41,12 @@ export default function Lobby() {
     return (
       <Screen>
         <View style={styles.centre}>
-          <Text style={styles.title}>could not join</Text>
-          <Text style={styles.hint}>{error}</Text>
-          <Button label="back home" variant="secondary" onPress={() => router.replace('/')} />
+          <T variant="h2" center>
+            Could not join
+          </T>
+          <T variant="meta" center style={styles.gap}>
+            {error}
+          </T>
         </View>
       </Screen>
     );
@@ -67,11 +68,9 @@ export default function Lobby() {
 function LobbyBody({ code }: { code: string | undefined }) {
   const router = useRouter();
   const { room, connection, loading, refresh } = useRoomSync(code);
-
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Once the host starts, everyone moves to the play surface together.
   useEffect(() => {
     if (!code) return;
     if (room && room.status !== 'lobby' && room.status !== 'abandoned') {
@@ -102,39 +101,43 @@ function LobbyBody({ code }: { code: string | undefined }) {
       <View style={styles.top}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="leave"
+          accessibilityLabel="Leave"
           onPress={() => router.replace('/')}
           style={styles.back}
         >
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
+          <Ionicons name="chevron-back" size={20} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>{room?.quiz.title ?? 'lobby'}</Text>
+        <T variant="row" numberOfLines={1} style={styles.quizTitle}>
+          {room?.quiz.title ?? 'Lobby'}
+        </T>
       </View>
 
       <OfflineBanner connection={connection} />
 
-      <Card style={styles.codeCard}>
-        <Text style={styles.codeLabel}>room code</Text>
-        <Text style={styles.code}>{code ? maskCode(code) : '· · · · · ·'}</Text>
+      <View style={styles.codeCard}>
+        <T variant="label">Room code</T>
+        <T style={styles.code}>{code ?? '······'}</T>
         {link ? (
           <View style={styles.qr}>
-            <QRCode value={link} size={104} backgroundColor={colors.surface} color={colors.text} />
+            <QRCode value={link} size={108} backgroundColor={colors.surface} color={colors.text} />
           </View>
         ) : null}
         <Button
-          label="share the link"
-          variant="ghost"
-          icon="share-outline"
+          label="Share the link"
+          variant="secondary"
           onPress={() => {
-            void Share.share({ message: `join my quiz: ${link} — code ${code}` });
+            void Share.share({ message: `Join my quiz: ${link} — code ${code}` });
           }}
+          style={styles.shareButton}
         />
-      </Card>
+      </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>in the room</Text>
-          <Pill label={`${room?.player_count ?? 0} joined`} tone="accent" />
+          <T variant="label">In the room</T>
+          <T variant="label" color={colors.accent}>
+            {room?.player_count ?? 0} joined
+          </T>
         </View>
 
         {loading ? (
@@ -142,37 +145,43 @@ function LobbyBody({ code }: { code: string | undefined }) {
         ) : (
           <View style={styles.list}>
             {players.map((player) => (
-              <View key={player.player_id} style={styles.playerRow}>
-                <Avatar emoji={player.avatar_emoji} size={32} ring={player.is_me} />
-                <Text style={styles.playerName} numberOfLines={1}>
+              <View key={player.player_id} style={styles.player}>
+                <Monogram name={player.name} size={32} highlight={player.is_me} />
+                <T variant="body" style={styles.playerName} numberOfLines={1}>
                   {player.name}
-                  {player.is_me ? ' (you)' : ''}
-                </Text>
-                {player.is_me && room?.is_host ? <Pill label="host" tone="neutral" /> : null}
+                </T>
+                {player.is_me && room?.is_host ? (
+                  <T variant="label" color={colors.muted}>
+                    HOST
+                  </T>
+                ) : null}
               </View>
             ))}
           </View>
         )}
       </View>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Notice message={error} /> : null}
 
       <View style={styles.footer}>
         {room?.is_host ? (
           <>
             <Button
-              label="start the game"
+              label="Start the game"
               onPress={() => void start()}
               loading={busy}
               disabled={!canStart}
-              icon="play"
             />
             {!canStart ? (
-              <Text style={styles.hint}>waiting for at least one player to join</Text>
+              <T variant="meta" center color={colors.faint}>
+                Waiting for at least one player to join
+              </T>
             ) : null}
           </>
         ) : (
-          <Text style={styles.hint}>the host starts when everyone is in</Text>
+          <T variant="meta" center color={colors.faint}>
+            The host starts when everyone is in
+          </T>
         )}
       </View>
     </Screen>
@@ -180,100 +189,50 @@ function LobbyBody({ code }: { code: string | undefined }) {
 }
 
 const styles = StyleSheet.create({
-  centre: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.x3,
-  },
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-    marginBottom: space.x4,
-  },
-  back: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -space.x3,
-  },
-  title: {
-    flex: 1,
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-  },
+  centre: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.x2 },
+  gap: { maxWidth: 300 },
+  top: { flexDirection: 'row', alignItems: 'center', gap: space.x2, marginBottom: space.x4 },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -space.x3 },
+  quizTitle: { flex: 1 },
   codeCard: {
     alignItems: 'center',
-    gap: space.x2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
     paddingVertical: space.x6,
-  },
-  codeLabel: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    gap: space.x2,
   },
   code: {
+    fontFamily: fonts.semibold,
+    fontSize: 34,
+    letterSpacing: 7,
     color: colors.text,
-    fontSize: typeScale.xxl,
-    fontWeight: weight.semibold,
-    fontFamily: numericFont,
-    letterSpacing: 4,
+    fontVariant: ['tabular-nums'],
   },
   qr: {
     marginVertical: space.x3,
     padding: space.x3,
-    borderRadius: 12,
+    borderRadius: radius.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.line,
   },
-  section: {
-    marginTop: space.x6,
-    gap: space.x3,
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  list: {
-    gap: space.x2,
-  },
-  playerRow: {
+  shareButton: { height: 46 },
+  section: { marginTop: space.x6, gap: space.x3 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  list: { gap: space.x2 },
+  player: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.x3,
-    minHeight: 44,
+    minHeight: 46,
+    paddingHorizontal: space.x3,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
-  playerName: {
-    flex: 1,
-    color: colors.text,
-    fontSize: typeScale.sm,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: typeScale.sm,
-    marginTop: space.x3,
-  },
-  footer: {
-    marginTop: space.x6,
-    gap: space.x2,
-  },
-  hint: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    textAlign: 'center',
-  },
+  playerName: { flex: 1 },
+  footer: { marginTop: space.x8, gap: space.x2 },
 });
