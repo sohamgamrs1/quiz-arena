@@ -1,90 +1,124 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Avatar } from '@/components/ui/Avatar';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Monogram } from '@/components/ui/Monogram';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { Pill } from '@/components/ui/Pill';
+import { Notice } from '@/components/ui/Notice';
 import { Screen } from '@/components/ui/Screen';
+import { T } from '@/components/ui/T';
 import { api, friendlyError } from '@/lib/api';
 import { loadProfile } from '@/lib/auth';
-import { readHistory, type HistoryEntry } from '@/lib/history';
+import { readHistory } from '@/lib/history';
 import type { QuizSummary } from '@/lib/types';
-import { colors, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, radius, space } from '@/lib/tokens';
 
 export default function Home() {
   const router = useRouter();
-  const [hosting, setHosting] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cloneTarget, setCloneTarget] = useState<QuizSummary | null>(null);
 
   const profile = useQuery({ queryKey: ['profile'], queryFn: loadProfile });
   const quizzes = useQuery({ queryKey: ['quizzes'], queryFn: api.listQuizzes });
   const history = useQuery({ queryKey: ['history'], queryFn: readHistory });
 
-  const list: QuizSummary[] = quizzes.data ?? [];
+  const list = quizzes.data ?? [];
   const published = list.filter((quiz) => quiz.status === 'published');
+  const name = profile.data?.display_name ?? 'player';
 
   async function host(quiz: QuizSummary): Promise<void> {
-    setHosting(quiz.id);
+    setBusyId(quiz.id);
     setError(null);
+    setCloneTarget(null);
     try {
       const room = await api.createRoom(quiz.id);
       router.push({ pathname: '/room/[code]', params: { code: room.code } });
     } catch (err) {
+      const message = friendlyError(err);
+      setError(message);
+      if (message.toLowerCase().includes('not yours')) setCloneTarget(quiz);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function duplicateAndHost(quiz: QuizSummary): Promise<void> {
+    setBusyId(quiz.id);
+    setError(null);
+    try {
+      const clone = await api.cloneQuiz(quiz.id);
+      await queryClient.invalidateQueries({ queryKey: ['quizzes'] });
+      const room = await api.createRoom(clone.quiz_id);
+      setCloneTarget(null);
+      router.push({ pathname: '/room/[code]', params: { code: room.code } });
+    } catch (err) {
       setError(friendlyError(err));
     } finally {
-      setHosting(null);
+      setBusyId(null);
     }
   }
 
   return (
     <Screen scroll>
       <View style={styles.top}>
-        <Text style={styles.wordmark}>quiz arena</Text>
+        <T variant="label" style={styles.mark}>
+          QUIZ ARENA
+        </T>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="your profile"
+          accessibilityLabel="Your profile"
           onPress={() => router.push('/profile')}
-          style={styles.profileButton}
+          style={styles.avatarHit}
         >
-          <Avatar emoji={profile.data?.avatar_emoji ?? '🙂'} size={36} />
+          <Monogram name={name} size={34} />
         </Pressable>
       </View>
 
+      <T variant="h1" style={styles.headline}>
+        Host a quiz
+      </T>
+      <T variant="meta" style={styles.sub}>
+        Start a live room, or join one with a code.
+      </T>
+
       <View style={styles.actions}>
         <Button
-          label={published.length > 0 ? 'host a game' : 'write a quiz first'}
-          icon="play"
+          label="Start a live room"
           onPress={() => {
             const first = published[0];
             if (first) void host(first);
             else router.push({ pathname: '/quiz/[id]', params: { id: 'new' } });
           }}
-          loading={hosting !== null && hosting === published[0]?.id}
+          loading={busyId !== null && busyId === published[0]?.id}
         />
-        <Button
-          label="join with a code"
-          icon="enter-outline"
-          variant="secondary"
-          onPress={() => router.push('/join')}
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Button label="Join with a code" variant="secondary" onPress={() => router.push('/join')} />
       </View>
+
+      {error ? (
+        <View style={styles.notice}>
+          <Notice message={error} />
+          {cloneTarget ? (
+            <Button
+              label="Duplicate to my quizzes"
+              variant="quiet"
+              onPress={() => void duplicateAndHost(cloneTarget)}
+              loading={busyId === cloneTarget.id}
+              style={styles.cloneButton}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>your quizzes</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="new quiz"
-            onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: 'new' } })}
-            style={styles.iconButton}
-          >
-            <Ionicons name="add" size={20} color={colors.text} />
-          </Pressable>
+          <T variant="label">Your quizzes</T>
+          <T variant="label" color={colors.muted}>
+            {list.length}
+          </T>
         </View>
 
         {quizzes.isLoading ? (
@@ -92,70 +126,85 @@ export default function Home() {
         ) : list.length === 0 ? (
           <EmptyState
             icon="albums-outline"
-            title="no quizzes yet"
-            body="write one by hand, or import a JSON or CSV bank."
-            actionLabel="new quiz"
-            onAction={() => router.push({ pathname: '/quiz/[id]', params: { id: 'new' } })}
+            title="No quizzes yet"
+            body="Write one by hand, or import a JSON or CSV question bank."
           />
         ) : (
           <View style={styles.list}>
             {list.map((quiz) => (
-              <Card key={quiz.id} style={styles.quizRow}>
-                <Text style={styles.emoji}>{quiz.cover_emoji}</Text>
-                <View style={styles.quizBody}>
-                  <Text style={styles.quizTitle} numberOfLines={1}>
-                    {quiz.title}
-                  </Text>
-                  <Pill label={quiz.status} tone={quiz.status === 'published' ? 'success' : 'neutral'} />
-                </View>
-                <View style={styles.rowActions}>
-                  {quiz.status === 'published' ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`host ${quiz.title}`}
-                      onPress={() => void host(quiz)}
-                      style={styles.iconButton}
-                    >
-                      {hosting === quiz.id ? (
-                        <ActivityIndicator color={colors.text} size="small" />
-                      ) : (
-                        <Ionicons name="play" size={18} color={colors.accent} />
-                      )}
-                    </Pressable>
-                  ) : null}
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`edit ${quiz.title}`}
-                    onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: quiz.id } })}
-                    style={styles.iconButton}
-                  >
-                    <Ionicons name="create-outline" size={18} color={colors.muted} />
-                  </Pressable>
-                </View>
-              </Card>
+              <View key={quiz.id} style={styles.row}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    quiz.status === 'published' ? `Host ${quiz.title}` : `Edit ${quiz.title}`
+                  }
+                  onPress={() =>
+                    quiz.status === 'published'
+                      ? void host(quiz)
+                      : router.push({ pathname: '/quiz/[id]', params: { id: quiz.id } })
+                  }
+                  style={({ pressed }) => [styles.rowMain, pressed ? styles.pressed : null]}
+                >
+                  <Monogram name={quiz.title} size={46} square single />
+                  <View style={styles.rowBody}>
+                    <T variant="row" numberOfLines={1}>
+                      {quiz.title}
+                    </T>
+                    <T variant="meta">{quiz.status === 'published' ? 'Published' : 'Draft'}</T>
+                  </View>
+                  {busyId === quiz.id ? (
+                    <ActivityIndicator color={colors.muted} size="small" />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+                  )}
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${quiz.title}`}
+                  onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: quiz.id } })}
+                  style={styles.editHit}
+                >
+                  <Ionicons name="create-outline" size={17} color={colors.faint} />
+                </Pressable>
+              </View>
             ))}
           </View>
         )}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="New quiz"
+          onPress={() => router.push({ pathname: '/quiz/[id]', params: { id: 'new' } })}
+          style={({ pressed }) => [styles.newRow, pressed ? styles.pressed : null]}
+        >
+          <Ionicons name="add" size={16} color={colors.muted} />
+          <T variant="meta" color={colors.muted}>
+            New quiz
+          </T>
+        </Pressable>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>recent games</Text>
+        <T variant="label">Recent</T>
         {(history.data ?? []).length === 0 ? (
-          <Text style={styles.muted}>nothing played yet</Text>
+          <EmptyState icon="time-outline" title="No games yet" body="Rooms you play will show up here." />
         ) : (
           <View style={styles.list}>
-            {(history.data ?? []).slice(0, 4).map((entry: HistoryEntry, index: number) => (
-              <Card key={`${entry.at}-${index}`} style={styles.quizRow}>
-                <Text style={styles.emoji}>{entry.emoji}</Text>
-                <View style={styles.quizBody}>
-                  <Text style={styles.quizTitle} numberOfLines={1}>
-                    {entry.quizTitle}
-                  </Text>
-                  <Text style={styles.muted}>
-                    #{entry.rank} of {entry.players} · {entry.score} pts · {entry.mode}
-                  </Text>
+            {(history.data ?? []).slice(0, 4).map((entry, index) => (
+              <View key={`${entry.at}-${index}`} style={styles.row}>
+                <View style={styles.rowMain}>
+                  <Monogram name={entry.quizTitle} size={46} square single />
+                  <View style={styles.rowBody}>
+                    <T variant="row" numberOfLines={1}>
+                      {entry.quizTitle}
+                    </T>
+                    <T variant="meta">
+                      #{entry.rank} of {entry.players} · {entry.score.toLocaleString('en-IN')} pts
+                    </T>
+                  </View>
                 </View>
-              </Card>
+              </View>
             ))}
           </View>
         )}
@@ -165,81 +214,51 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  top: {
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  mark: { letterSpacing: 2.4, color: colors.text },
+  avatarHit: { minWidth: 44, minHeight: 44, alignItems: 'flex-end', justifyContent: 'center' },
+  headline: { marginTop: space.x8 },
+  sub: { marginTop: space.x2, marginBottom: space.x6 },
+  actions: { gap: space.x2 },
+  notice: { marginTop: space.x3, gap: space.x2 },
+  cloneButton: { height: 46 },
+  section: { marginTop: space.x8, gap: space.x3 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  list: { gap: space.x2 },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: space.x6,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
   },
-  wordmark: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-    letterSpacing: -0.2,
-  },
-  profileButton: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  actions: {
-    gap: space.x2,
-    marginBottom: space.x6,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: typeScale.xs,
-  },
-  section: {
-    marginBottom: space.x6,
-    gap: space.x3,
-  },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionTitle: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  iconButton: {
-    minWidth: 44,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  list: {
-    gap: space.x2,
-  },
-  quizRow: {
+  rowMain: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.x3,
+    paddingHorizontal: space.x3,
     paddingVertical: space.x3,
   },
-  emoji: {
-    fontSize: 24,
+  rowBody: { flex: 1, gap: space.x1 },
+  pressed: { opacity: 0.85 },
+  editHit: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: space.x1,
   },
-  quizBody: {
-    flex: 1,
-    gap: space.x1,
-  },
-  quizTitle: {
-    color: colors.text,
-    fontSize: typeScale.md,
-    fontWeight: weight.semibold,
-  },
-  rowActions: {
+  newRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  muted: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
+    justifyContent: 'center',
+    gap: space.x2,
+    height: 46,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.lineSoft,
   },
 });
