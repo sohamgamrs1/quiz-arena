@@ -126,5 +126,7 @@ export function useRoomSync(code: string | undefined) {
     };
   }, [roomId, refresh, acceptEvent, setConnection]);
 
-  return { room, roomId, loading, error, refresh };
+  const connection = useGameStore((s) => s.connection);
+
+  return { room, roomId, connection, loading, error, refresh };
 }

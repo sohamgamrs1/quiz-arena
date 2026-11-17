@@ -77,12 +77,12 @@ export const api = {
   leaderboard: (roomId: string) => rpc<LeaderboardRow[]>('get_leaderboard', { p_room_id: roomId }),
 
   startSolo: (quizId: string) =>
-    rpc<{ room_id: string; total_questions: number }>('start_solo', { p_quiz_id: quizId }),
+    rpc<{ room_id: string; code: string; total_questions: number }>('start_solo', { p_quiz_id: quizId }),
 
   getChallenge: (slug: string) => rpc<ChallengeInfo | null>('get_challenge', { p_slug: slug }),
 
   startAsync: (slug: string) =>
-    rpc<{ room_id: string; total_questions: number }>('start_async', { p_slug: slug }),
+    rpc<{ room_id: string; code: string; total_questions: number }>('start_async', { p_slug: slug }),
 
   listQuizzes: async (): Promise<QuizSummary[]> => {
     if (MOCK_MODE) return mock.listQuizzes();
@@ -107,4 +107,8 @@ export const api = {
   getQuizForEdit: (quizId: string) => rpc<QuizRecord>('get_quiz_for_edit', { p_quiz_id: quizId }),
 
   deleteQuiz: (quizId: string) => rpc<null>('delete_quiz', { p_quiz_id: quizId }),
+
+  /** Copies a published quiz into your account so you can host it. */
+  cloneQuiz: (quizId: string) =>
+    rpc<{ quiz_id: string; question_count: number }>('clone_quiz', { p_quiz_id: quizId }),
 };

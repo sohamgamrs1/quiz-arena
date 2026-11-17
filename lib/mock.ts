@@ -513,6 +513,8 @@ export const mock = {
         return demoQuiz;
       case 'delete_quiz':
         return null;
+      case 'clone_quiz':
+        return { quiz_id: demoQuiz.id, question_count: QUESTIONS.length };
       default:
         throw new Error(`mock: ${fn} is not implemented`);
     }
