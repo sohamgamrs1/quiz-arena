@@ -26,6 +26,7 @@ before the question closes, and no client can score itself. See
 | State | Zustand for the game store, TanStack Query for reads |
 | Backend | Supabase: Postgres, Auth (anonymous), Realtime, RLS |
 | Styling | Plain `StyleSheet` over one design-token module, dark-first |
+| Type | Inter, bundled in `assets/fonts` and loaded once in `app/_layout.tsx` |
 | Icons | `@expo/vector-icons` (Ionicons) |
 
 ---
@@ -105,6 +106,27 @@ scripts/
   build-bank.py          source → importable bank (even a/b/c/d spread)
   build-seed.py          bank → seed.sql
 ```
+
+---
+
+## Design system
+
+Dark-first, one accent, two weights, one spacing scale. The rules are enforced by the
+token module rather than by discipline:
+
+- **Type** is Inter 400 and 600 only, bundled as `.ttf` in `assets/fonts` so Android
+  renders the same face as iOS and web instead of falling back to Roboto. Every size
+  on screen comes from `size` in `lib/tokens.ts` via the single `T` text primitive —
+  there is no ad-hoc `fontSize` anywhere in the app.
+- **Identity is typographic.** No emoji avatars. A player or quiz gets a monogram tile
+  whose hue is derived from the name (`lib/monogram.ts`), so the same person always
+  looks the same and nothing depends on a character being rendered by the OS.
+- **Colour** is near-black surfaces separated by 1px hairlines, never shadows. The
+  accent appears only on the primary action and the current selection; success and
+  danger are reserved for correctness.
+- **Spacing** is 4/8/12/16/24/32/48 and radii are 12/16/pill. Nothing off-scale.
+- **Motion** is capped at 180ms and is skipped entirely when the device asks for
+  reduced motion.
 
 ---
 
