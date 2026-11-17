@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Monogram } from '@/components/ui/Monogram';
+import { Notice } from '@/components/ui/Notice';
 import { Screen } from '@/components/ui/Screen';
+import { T } from '@/components/ui/T';
 import { api, friendlyError } from '@/lib/api';
-import { colors, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, radius, space } from '@/lib/tokens';
 
 /** Async challenge: the same quiz, at your own pace, in a private room of one. */
 export default function Challenge() {
@@ -39,49 +41,43 @@ export default function Challenge() {
 
   return (
     <Screen scroll>
-      <View style={styles.top}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="back"
-          onPress={() => router.replace('/')}
-          style={styles.back}
-        >
-          <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </Pressable>
-        <Text style={styles.title}>challenge</Text>
-      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Back"
+        onPress={() => router.replace('/')}
+        style={styles.back}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.text} />
+      </Pressable>
 
       {challenge.isLoading ? (
         <ActivityIndicator color={colors.muted} />
       ) : !challenge.data ? (
-        <EmptyState
-          icon="link-outline"
-          title="this challenge is not live"
-          body="the link may have been retired, or the quiz was unpublished."
-          actionLabel="back home"
-          onAction={() => router.replace('/')}
-        />
+        <EmptyState icon="link-outline" title="This challenge is not live" body="The link may have been retired." />
       ) : (
         <>
-          <Card style={styles.card}>
-            <Text style={styles.emoji}>{challenge.data.cover_emoji}</Text>
-            <Text style={styles.quizTitle}>{challenge.data.title}</Text>
+          <View style={styles.card}>
+            <Monogram name={challenge.data.title} size={56} square single />
+            <T variant="h2" center style={styles.title}>
+              {challenge.data.title}
+            </T>
             {challenge.data.description ? (
-              <Text style={styles.description}>{challenge.data.description}</Text>
+              <T variant="meta" center>
+                {challenge.data.description}
+              </T>
             ) : null}
-            <Text style={styles.meta}>
-              {challenge.data.question_count} questions · from {challenge.data.owner_name}
-            </Text>
-          </Card>
+            <T variant="label">
+              {challenge.data.question_count} QUESTIONS · FROM {challenge.data.owner_name.toUpperCase()}
+            </T>
+          </View>
 
-          <Text style={styles.note}>
-            answers are timed the same way as a live room, but you play alone and the
-            questions advance when you are ready.
-          </Text>
+          <T variant="meta" style={styles.note}>
+            Answers are timed the same way as a live room, but you play alone and advance when you are ready.
+          </T>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Notice message={error} /> : null}
 
-          <Button label="start" onPress={() => void play()} loading={busy} icon="play" />
+          <Button label="Start" onPress={() => void play()} loading={busy} style={styles.action} />
         </>
       )}
     </Screen>
@@ -89,56 +85,19 @@ export default function Challenge() {
 }
 
 const styles = StyleSheet.create({
-  top: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.x2,
-    marginBottom: space.x4,
-  },
-  back: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -space.x3,
-  },
-  title: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-  },
+  back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginLeft: -space.x3 },
   card: {
     alignItems: 'center',
-    gap: space.x2,
+    gap: space.x3,
     paddingVertical: space.x8,
+    paddingHorizontal: space.x4,
+    borderRadius: radius.card,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginTop: space.x4,
   },
-  emoji: {
-    fontSize: 40,
-  },
-  quizTitle: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-    textAlign: 'center',
-  },
-  description: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-  },
-  meta: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-  },
-  note: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    lineHeight: 20,
-    marginVertical: space.x6,
-  },
-  error: {
-    color: colors.danger,
-    fontSize: typeScale.sm,
-    marginBottom: space.x3,
-  },
+  title: { marginTop: space.x1 },
+  note: { marginVertical: space.x6, lineHeight: 19 },
+  action: { marginTop: 'auto' },
 });
