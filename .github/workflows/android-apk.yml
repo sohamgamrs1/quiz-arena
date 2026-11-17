@@ -82,6 +82,7 @@ jobs:
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon --stacktrace
+          -Pandroid.kotlinVersion=1.9.24 \
            -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
             
       - name: Name the artifact
