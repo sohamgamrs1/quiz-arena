@@ -5,22 +5,10 @@ import { colors, radius, space } from '@/lib/tokens';
 interface Props extends PropsWithChildren {
   style?: StyleProp<ViewStyle>;
   padded?: boolean;
-  raised?: boolean;
 }
 
-export function Card({ children, style, padded = true, raised = false }: Props) {
-  return (
-    <View
-      style={[
-        styles.card,
-        padded ? styles.padded : null,
-        raised ? styles.raised : null,
-        style,
-      ]}
-    >
-      {children}
-    </View>
-  );
+export function Card({ children, style, padded = true }: Props) {
+  return <View style={[styles.card, padded ? styles.padded : null, style]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -28,12 +16,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.line,
   },
   padded: {
     padding: space.x4,
-  },
-  raised: {
-    backgroundColor: colors.surfaceRaised,
   },
 });

@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, layout, radius, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, fonts, layout, radius, size, space } from '@/lib/tokens';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type Variant = 'primary' | 'secondary' | 'quiet';
 
 interface Props {
   label: string;
@@ -26,6 +26,7 @@ export function Button({
   accessibilityHint,
 }: Props) {
   const inactive = disabled || loading;
+  const ink = variant === 'primary' ? colors.accentInk : colors.text;
 
   return (
     <Pressable
@@ -45,20 +46,11 @@ export function Button({
     >
       <View style={styles.content}>
         {loading ? (
-          <ActivityIndicator color={variant === 'primary' ? colors.bg : colors.text} size="small" />
+          <ActivityIndicator color={ink} size="small" />
         ) : (
           <>
-            {icon ? (
-              <Ionicons
-                name={icon}
-                size={18}
-                color={variant === 'primary' ? colors.bg : colors.text}
-                style={styles.icon}
-              />
-            ) : null}
-            <Text style={[styles.label, variant === 'primary' ? styles.labelPrimary : styles.labelDefault]}>
-              {label}
-            </Text>
+            {icon ? <Ionicons name={icon} size={17} color={ink} style={styles.icon} /> : null}
+            <Text style={[styles.label, { color: ink }]}>{label}</Text>
           </>
         )}
       </View>
@@ -68,11 +60,11 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: layout.hitArea + 8,
+    height: layout.buttonHeight,
     borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: space.x6,
+    paddingHorizontal: space.x4,
     borderWidth: 1,
   },
   content: {
@@ -88,31 +80,22 @@ const styles = StyleSheet.create({
     borderColor: colors.accent,
   },
   secondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-  },
-  ghost: {
     backgroundColor: 'transparent',
-    borderColor: 'transparent',
+    borderColor: colors.line,
   },
-  danger: {
-    backgroundColor: colors.dangerSoft,
-    borderColor: colors.danger,
+  quiet: {
+    backgroundColor: colors.raised,
+    borderColor: colors.line,
   },
   pressed: {
-    opacity: 0.82,
+    opacity: 0.86,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.4,
   },
   label: {
-    fontSize: typeScale.md,
-    fontWeight: weight.semibold,
-  },
-  labelPrimary: {
-    color: colors.bg,
-  },
-  labelDefault: {
-    color: colors.text,
+    fontFamily: fonts.semibold,
+    fontSize: size.body,
+    letterSpacing: -0.1,
   },
 });

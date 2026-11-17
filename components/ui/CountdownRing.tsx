@@ -1,65 +1,47 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { colors, numericFont, type as typeScale, weight } from '@/lib/tokens';
+import { T } from './T';
+import { colors } from '@/lib/tokens';
 
 interface Props {
-  /** 0..1, where 1 is a full ring. */
   progress: number;
   seconds: number;
   size?: number;
-  strokeWidth?: number;
 }
 
-export function CountdownRing({ progress, seconds, size = 56, strokeWidth = 4 }: Props) {
+export function CountdownRing({ progress, seconds, size = 52 }: Props) {
   const clamped = Math.max(0, Math.min(1, progress));
-  const radius = (size - strokeWidth) / 2;
+  const stroke = 3;
+  const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
-  const dash = circumference * clamped;
   const urgent = seconds <= 5;
 
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={radius} stroke={colors.line} strokeWidth={stroke} fill="none" />
         <Circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={colors.border}
-          strokeWidth={strokeWidth}
+          stroke={urgent ? colors.bad : colors.accent}
+          strokeWidth={stroke}
           fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={urgent ? colors.danger : colors.accent}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={`${dash} ${circumference - dash}`}
+          strokeDasharray={`${circumference * clamped} ${circumference}`}
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
       <View style={styles.centre}>
-        <Text style={[styles.label, urgent ? styles.urgent : null]}>{seconds}</Text>
+        <T variant="meta" numeric color={urgent ? colors.bad : colors.text} style={styles.value}>
+          {seconds}
+        </T>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  centre: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: {
-    color: colors.text,
-    fontSize: typeScale.sm,
-    fontWeight: weight.semibold,
-    fontFamily: numericFont,
-  },
-  urgent: {
-    color: colors.danger,
-  },
+  centre: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+  value: { fontSize: 14 },
 });

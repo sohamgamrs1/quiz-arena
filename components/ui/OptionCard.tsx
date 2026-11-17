@@ -1,26 +1,28 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Option } from '@/lib/types';
-import { colors, layout, radius, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, fonts, radius, size, space } from '@/lib/tokens';
 
-export type OptionState = 'idle' | 'selected' | 'correct' | 'wrong' | 'muted';
+export type OptionState = 'idle' | 'selected' | 'correct' | 'wrong' | 'dim';
 
 interface Props {
   option: Option;
   state: OptionState;
   onPress?: () => void;
   disabled?: boolean;
-  count?: number;
 }
 
-export function OptionCard({ option, state, onPress, disabled = false, count }: Props) {
-  const tone =
-    state === 'correct'
-      ? styles.correct
-      : state === 'wrong'
-        ? styles.wrong
-        : state === 'selected'
-          ? styles.selected
-          : null;
+export function OptionCard({ option, state, onPress, disabled = false }: Props) {
+  const skin =
+    state === 'correct' ? styles.correct
+    : state === 'wrong' ? styles.wrong
+    : state === 'selected' ? styles.selected
+    : null;
+
+  const keySkin =
+    state === 'correct' ? styles.keyCorrect
+    : state === 'wrong' ? styles.keyWrong
+    : state === 'selected' ? styles.keySelected
+    : null;
 
   return (
     <Pressable
@@ -31,83 +33,57 @@ export function OptionCard({ option, state, onPress, disabled = false, count }: 
       disabled={disabled || !onPress}
       style={({ pressed }) => [
         styles.base,
-        tone,
+        skin,
         pressed && !disabled ? styles.pressed : null,
-        state === 'muted' ? styles.dimmed : null,
+        state === 'dim' ? styles.dim : null,
       ]}
     >
-      <View style={[styles.badge, state === 'selected' || state === 'correct' ? styles.badgeOn : null]}>
-        <Text style={[styles.badgeText, state === 'selected' || state === 'correct' ? styles.badgeTextOn : null]}>
+      <View style={[styles.key, keySkin]}>
+        <Text style={[styles.keyText, state !== 'idle' && state !== 'dim' ? styles.keyTextOn : null]}>
           {option.id.toUpperCase()}
         </Text>
       </View>
       <Text style={styles.text}>{option.text}</Text>
-      {typeof count === 'number' ? <Text style={styles.count}>{count}</Text> : null}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: layout.hitArea + 12,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.card,
-    paddingHorizontal: space.x4,
-    paddingVertical: space.x3,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    paddingHorizontal: space.x3,
   },
-  selected: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentSoft,
-  },
-  correct: {
-    borderColor: colors.success,
-    backgroundColor: colors.successSoft,
-  },
-  wrong: {
-    borderColor: colors.danger,
-    backgroundColor: colors.dangerSoft,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  dimmed: {
-    opacity: 0.5,
-  },
-  badge: {
-    width: 28,
-    height: 28,
+  selected: { borderColor: colors.accent, backgroundColor: colors.accentSoft },
+  correct: { borderColor: colors.ok, backgroundColor: colors.okSoft },
+  wrong: { borderColor: colors.bad, backgroundColor: colors.badSoft },
+  pressed: { opacity: 0.88 },
+  dim: { opacity: 0.45 },
+  key: {
+    width: 25,
+    height: 25,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.line,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: space.x3,
   },
-  badgeOn: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accent,
-  },
-  badgeText: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-  },
-  badgeTextOn: {
-    color: colors.bg,
-  },
+  keySelected: { backgroundColor: colors.accent, borderColor: colors.accent },
+  keyCorrect: { backgroundColor: colors.ok, borderColor: colors.ok },
+  keyWrong: { backgroundColor: colors.bad, borderColor: colors.bad },
+  keyText: { color: colors.muted, fontFamily: fonts.semibold, fontSize: 11 },
+  keyTextOn: { color: '#0A0B0F' },
   text: {
     flex: 1,
     color: colors.text,
-    fontSize: typeScale.md,
-    fontWeight: weight.regular,
-  },
-  count: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    marginLeft: space.x2,
+    fontFamily: fonts.regular,
+    fontSize: size.body,
+    lineHeight: 20,
   },
 });
