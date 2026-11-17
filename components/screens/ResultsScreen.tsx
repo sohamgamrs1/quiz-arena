@@ -1,12 +1,12 @@
-// dominant element: the podium.
-import { StyleSheet, Text, View } from 'react-native';
+// dominant element: the podium
+import { StyleSheet, View } from 'react-native';
+import { T } from '../ui/T';
 import { Button } from '../ui/Button';
-import { Card } from '../ui/Card';
 import { LeaderboardList } from '../LeaderboardList';
 import { Podium } from '../Podium';
 import type { RoomState } from '@/lib/types';
 import { accuracy, averageResponseMs } from '@/lib/format';
-import { colors, numericFont, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, radius, space } from '@/lib/tokens';
 
 interface Props {
   room: RoomState;
@@ -18,112 +18,76 @@ interface Props {
   onHome: () => void;
 }
 
-export function ResultsScreen({
-  room,
-  answered,
-  correct,
-  responseTimes,
-  onRematch,
-  onShare,
-  onHome,
-}: Props) {
+export function ResultsScreen({ room, answered, correct, responseTimes, onRematch, onShare, onHome }: Props) {
   const me = room.leaderboard.find((row) => row.is_me);
   const avg = averageResponseMs(responseTimes);
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.header}>
-        <Text style={styles.title}>that is the quiz</Text>
-        <Text style={styles.sub}>{room.quiz.title}</Text>
+      <View style={styles.head}>
+        <T variant="label">Final</T>
+        <T variant="h2" style={styles.title} numberOfLines={1}>
+          {room.quiz.title}
+        </T>
       </View>
 
       <Podium rows={room.leaderboard} />
 
-      <Card style={styles.stats}>
+      <View style={styles.stats}>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{me ? `#${me.rank}` : '—'}</Text>
-          <Text style={styles.statLabel}>your rank</Text>
+          <T variant="row" numeric>
+            {me ? `#${me.rank}` : '—'}
+          </T>
+          <T variant="label">Rank</T>
         </View>
         <View style={styles.divider} />
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{accuracy(correct, Math.max(answered, 1))}%</Text>
-          <Text style={styles.statLabel}>accuracy</Text>
+          <T variant="row" numeric>
+            {accuracy(correct, Math.max(answered, 1))}%
+          </T>
+          <T variant="label">Accuracy</T>
         </View>
         <View style={styles.divider} />
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{avg > 0 ? `${(avg / 1000).toFixed(1)}s` : '—'}</Text>
-          <Text style={styles.statLabel}>avg answer</Text>
+          <T variant="row" numeric>
+            {avg > 0 ? `${(avg / 1000).toFixed(1)}s` : '—'}
+          </T>
+          <T variant="label">Avg answer</T>
         </View>
-      </Card>
+      </View>
 
       <View style={styles.board}>
-        <Text style={styles.sectionLabel}>final standings</Text>
+        <T variant="label" style={styles.boardLabel}>
+          Standings
+        </T>
         <LeaderboardList rows={room.leaderboard} limit={10} />
       </View>
 
       <View style={styles.actions}>
-        <Button label="share the result" onPress={onShare} icon="share-outline" />
-        <Button label="rematch" onPress={onRematch} variant="secondary" icon="refresh" />
-        <Button label="back home" onPress={onHome} variant="ghost" />
+        <Button label="Share result" variant="quiet" onPress={onShare} />
+        <Button label="Back home" variant="secondary" onPress={onHome} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    gap: space.x4,
-  },
-  header: {
-    gap: space.x1,
-  },
-  title: {
-    color: colors.text,
-    fontSize: typeScale.xl,
-    fontWeight: weight.semibold,
-  },
-  sub: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-  },
+  wrap: { flex: 1 },
+  head: { gap: space.x1, marginBottom: space.x6 },
+  title: { marginTop: space.x1 },
   stats: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    paddingVertical: space.x4,
+    marginTop: space.x6,
   },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-    gap: space.x1,
-  },
-  statValue: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-    fontFamily: numericFont,
-  },
-  statLabel: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-  },
-  divider: {
-    width: 1,
-    alignSelf: 'stretch',
-    backgroundColor: colors.border,
-  },
-  board: {
-    gap: space.x2,
-  },
-  sectionLabel: {
-    color: colors.muted,
-    fontSize: typeScale.xs,
-    fontWeight: weight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  actions: {
-    gap: space.x2,
-    marginTop: space.x2,
-  },
+  stat: { flex: 1, alignItems: 'center', gap: space.x1 },
+  divider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.line },
+  board: { marginTop: space.x6, gap: space.x2 },
+  boardLabel: { marginBottom: space.x1 },
+  actions: { marginTop: 'auto', paddingTop: space.x6, gap: space.x2 },
 });

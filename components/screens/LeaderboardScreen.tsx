@@ -1,9 +1,10 @@
-// dominant element: the ranked list. Your row is the only coloured thing on screen.
-import { StyleSheet, Text, View } from 'react-native';
+// dominant element: the ranked list
+import { StyleSheet, View } from 'react-native';
+import { T } from '../ui/T';
 import { Button } from '../ui/Button';
 import { LeaderboardList } from '../LeaderboardList';
 import type { RoomState } from '@/lib/types';
-import { colors, radius, space, type as typeScale, weight } from '@/lib/tokens';
+import { colors, radius, space } from '@/lib/tokens';
 
 interface Props {
   room: RoomState;
@@ -14,83 +15,60 @@ interface Props {
 
 export function LeaderboardScreen({ room, isHost, onNext, busy }: Props) {
   const me = room.leaderboard.find((row) => row.is_me);
+  const last = room.index + 1 >= room.total_questions;
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.header}>
-        <Text style={styles.title}>leaderboard</Text>
-        <Text style={styles.sub}>
-          after question {room.index + 1} of {room.total_questions}
-        </Text>
+      <View style={styles.head}>
+        <T variant="label">
+          After question {room.index + 1} of {room.total_questions}
+        </T>
+        <T variant="h2" style={styles.title}>
+          Leaderboard
+        </T>
       </View>
 
       {me ? (
-        <View style={styles.meCard}>
-          <Text style={styles.meRank}>#{me.rank}</Text>
-          <Text style={styles.meScore}>{me.score} pts</Text>
+        <View style={styles.me}>
+          <T variant="body" numeric color={colors.text}>
+            #{me.rank}
+          </T>
+          <T variant="body" numeric color={colors.muted}>
+            {me.score.toLocaleString('en-IN')} pts
+          </T>
         </View>
       ) : null}
 
       <LeaderboardList rows={room.leaderboard} />
 
-      {isHost ? (
-        <Button
-          label={room.index + 1 >= room.total_questions ? 'see results' : 'next question'}
-          onPress={onNext}
-          loading={busy}
-          style={styles.action}
-        />
-      ) : (
-        <Text style={styles.waiting}>waiting for the host to continue</Text>
-      )}
+      <View style={styles.actions}>
+        {isHost ? (
+          <Button label={last ? 'See results' : 'Next question'} onPress={onNext} loading={busy} />
+        ) : (
+          <T variant="meta" center color={colors.faint} style={styles.waiting}>
+            Waiting for the host to continue
+          </T>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    gap: space.x4,
-  },
-  header: {
-    gap: space.x1,
-  },
-  title: {
-    color: colors.text,
-    fontSize: typeScale.xl,
-    fontWeight: weight.semibold,
-  },
-  sub: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-  },
-  meCard: {
+  wrap: { flex: 1, gap: space.x4 },
+  head: { gap: space.x1 },
+  title: { marginTop: space.x1 },
+  me: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: space.x4,
     paddingVertical: space.x3,
-    borderRadius: radius.card,
+    borderRadius: radius.sm,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.accentLine,
   },
-  meRank: {
-    color: colors.text,
-    fontSize: typeScale.lg,
-    fontWeight: weight.semibold,
-  },
-  meScore: {
-    color: colors.text,
-    fontSize: typeScale.sm,
-  },
-  action: {
-    marginTop: space.x2,
-  },
-  waiting: {
-    color: colors.muted,
-    fontSize: typeScale.sm,
-    textAlign: 'center',
-    paddingVertical: space.x3,
-  },
+  actions: { marginTop: 'auto', paddingTop: space.x4 },
+  waiting: { paddingVertical: space.x3 },
 });
